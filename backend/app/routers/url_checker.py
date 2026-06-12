@@ -1,15 +1,18 @@
-from app.models.user import User
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
+from app.models.user import User
 from app.models.url_check import UrlCheck
+from app.database.session import get_db
 from app.schemas.url_schema import UrlSchema
 from app.dependencies import get_current_user
+from app.analyzers.url_analyzer import analyze_url
+from app.deepseek_service import explain_url
 
 router = APIRouter()
 
 print("URL ROUTER LOADED")
+
 
 @router.post("/check-url")
 def check_url(
@@ -19,13 +22,8 @@ def check_url(
 ):
 
     user = db.query(User).filter(
-        User.username == data.username
+        User.username == current_user
     ).first()
-
-    print(dir(user))
-    print(user)
-    print(type(user))
-    print(user.__dict__)
 
     if not user:
         return {
@@ -41,20 +39,18 @@ def check_url(
         user.checks_left -= 1
         db.commit()
 
-        suspicious_words = [
-            "login",
-            "verify",
-            "bank",
-            "paypal",
-            "secure"
-        ]
+    analysis = analyze_url(data.url)
 
-        status = "safe"
+    status = analysis["status"]
+    risk_score = analysis["risk_score"]
+    reasons = analysis["reasons"]
 
-    for word in suspicious_words:
-        if word in data.url.lower():
-            status = "suspicious"
-            break
+    ai_explanation = explain_url(
+        data.url,
+        status,
+        risk_score,
+        reasons
+    )
 
     check = UrlCheck(
         url=data.url,
@@ -69,6 +65,9 @@ def check_url(
     return {
         "url": data.url,
         "status": status,
+        "risk_score": risk_score,
+        "reasons": reasons,
+        "ai_explanation": ai_explanation,
         "checks_left": user.checks_left,
         "premium": user.is_premium
-        }
+    }

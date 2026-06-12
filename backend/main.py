@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.routers.auth import router as auth_router
-from app.routers.url_cheaker import router as url_router
+from app.routers.url_checker import router as url_router
 from app.routers.history import router as history_router
 from fastapi.middleware.cors import CORSMiddleware
 

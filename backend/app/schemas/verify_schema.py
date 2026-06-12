@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
-class LoginSchema(BaseModel):
+
+class VerifySchema(BaseModel):
     email: EmailStr
-    password: str
+    code: str
