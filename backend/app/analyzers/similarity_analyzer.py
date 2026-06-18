@@ -129,7 +129,9 @@ def analyze_similarity(url: str) -> SimilarityAnalysisResult:
         risk_score += 35
         reasons.append("Обнаружено смешение алфавитов")
 
-    if unicode_normalized_hostname != hostname:
+    if (
+        unicode_normalized_hostname != possible_original_hostname
+    ):
         risk_score += 40
 
         reasons.append(
@@ -159,26 +161,23 @@ def analyze_similarity(url: str) -> SimilarityAnalysisResult:
 
     if impersonated_brand:
         risk_score += 50
-        reasons.append("Домен имитирует известный бренд")
         reasons.append(
-            f"Обнаружена попытка подделки бренда «{impersonated_brand}»"
+            f"Ссылка имитирует бренд {impersonated_brand.capitalize()}"
         )
-
-    if possible_original_hostname != hostname:
-        reasons.append(
-            f"Возможный оригинальный домен: {possible_original_hostname}"
-        )
-
-    if detected_substitutions:
-        reasons.append(
-            "Злоумышленники часто заменяют буквы похожими символами "
-            "для имитации известных сайтов"
-        )
-
+    
     return {
         "risk_score": min(risk_score, MAX_RISK_SCORE),
         "reasons": reasons,
     }
+
+    if possible_original_hostname != hostname and character_substitutions:
+        risk_score += 20
+
+        reasons.append(
+            "Используется подмена символов ("
+            + ", ".join(character_substitutions)
+            + ")"
+        )
 
 
 def _extract_hostname(url: str) -> str:
@@ -217,7 +216,23 @@ def normalize_unicode_homoglyphs(
     return normalized_hostname
 
 def get_possible_original_hostname(hostname: str) -> str:
-    return normalize_hostname(hostname)
+
+    labels = _hostname_labels(hostname)
+
+    for label in labels:
+
+        normalized_label = label
+
+        for suspicious_value, replacement in CHARACTER_SUBSTITUTIONS.items():
+            normalized_label = normalized_label.replace(
+                suspicious_value,
+                replacement,
+            )
+
+        if normalized_label in KNOWN_IMPERSONATION_TARGETS:
+            return hostname.replace(label, normalized_label)
+
+    return hostname
 
 
 def normalize_multichar_substitutions(hostname: str) -> str:
@@ -259,14 +274,27 @@ def _has_mixed_scripts(hostname: str) -> bool:
 
 def _get_detected_character_substitutions(hostname: str) -> list[str]:
     detected_substitutions: list[str] = []
-    labels = _hostname_labels(hostname)
 
-    for suspicious_value, replacement in CHARACTER_SUBSTITUTIONS.items():
-        if any(
-            suspicious_value in label and any(character.isalpha() for character in label)
-            for label in labels
-        ):
-            detected_substitutions.append(f"{suspicious_value} → {replacement}")
+    for label in _hostname_labels(hostname):
+
+        normalized_label = label
+
+        for suspicious_value, replacement in CHARACTER_SUBSTITUTIONS.items():
+            normalized_label = normalized_label.replace(
+                suspicious_value,
+                replacement,
+            )
+
+        # проверяем только случаи,
+        # когда после замены получился известный бренд
+        if normalized_label in KNOWN_IMPERSONATION_TARGETS:
+
+            for suspicious_value, replacement in CHARACTER_SUBSTITUTIONS.items():
+
+                if suspicious_value in label:
+                    detected_substitutions.append(
+                        f"{suspicious_value} → {replacement}"
+                    )
 
     return detected_substitutions
 

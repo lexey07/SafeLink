@@ -88,9 +88,9 @@ def analyze_structure(url: str) -> StructureAnalysisResult:
         risk_score += 20
         reasons.append("Ссылка содержит символ @")
 
-    if _is_ip_address(hostname):
-        risk_score += 20
-        reasons.append("Вместо домена используется IP-адрес")
+    #if _is_ip_address(hostname):
+     #   risk_score += 20
+      #  reasons.append("Вместо домена используется IP-адрес")
 
     if _is_local_or_private(hostname):
         risk_score += 25

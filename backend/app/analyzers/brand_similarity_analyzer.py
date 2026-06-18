@@ -74,15 +74,21 @@ def analyze_brand_similarity(url: str) -> BrandSimilarityResult:
     hostname_brand_matches = _find_hostname_brand_matches(hostname, domain_name)
     brands_with_mention_reason: set[str] = set()
 
+    if _is_ip_address(hostname):
+        return {
+            "risk_score": 0,
+            "reasons": [],
+        }
+
     for match in similar_brand_matches:
         brand = match["brand"]
         risk_score += DISTANCE_RISK_SCORES[match["distance"]]
 
         if brand not in brands_with_mention_reason:
-            reasons.append(f"Домен похож на бренд {_format_brand_name(brand)}")
+            reasons.append(
+                f"Ссылка имитирует бренд {_format_brand_name(brand)}"
+            )
             brands_with_mention_reason.add(brand)
-
-        reasons.append(f"Расстояние Левенштейна: {match['distance']}")
 
     for match in brand_keyword_matches:
         brand = match["brand"]
@@ -90,8 +96,7 @@ def analyze_brand_similarity(url: str) -> BrandSimilarityResult:
 
         if brand not in brands_with_mention_reason:
             reasons.append(
-                "Обнаружено упоминание известного бренда: "
-                f"{_format_brand_name(brand)}"
+                f"Ссылка использует бренд {_format_brand_name(brand)}"
             )
             brands_with_mention_reason.add(brand)
 
@@ -179,6 +184,12 @@ def _find_brand_keyword_matches(domain_name: str) -> list[BrandKeywordMatch]:
     matches: list[BrandKeywordMatch] = []
 
     for brand in sorted(KNOWN_BRANDS):
+
+        # настоящий домен бренда не должен получать риск
+        if domain_name == brand:
+            continue
+
+        # ищем бренд внутри другого домена
         if brand in domain_name:
             matches.append({"brand": brand})
 
@@ -259,3 +270,13 @@ def _deduplicate_reasons(reasons: list[str]) -> list[str]:
 
 def _format_brand_name(brand: str) -> str:
     return brand.capitalize()
+
+from ipaddress import ip_address
+
+
+def _is_ip_address(hostname: str) -> bool:
+    try:
+        ip_address(hostname)
+        return True
+    except ValueError:
+        return False

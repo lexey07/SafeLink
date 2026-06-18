@@ -6,6 +6,20 @@ function Dashboard() {
     const [result, setResult] = useState(null);
 
     const checkUrl = async () => {
+        if (!url.trim()) {
+            setResult({
+                message: "Введите ссылку для проверки",
+            });
+            return;
+        }
+
+        if (url.trim().length < 4) {
+            setResult({
+                message: "Ссылка слишком короткая",
+            });
+            return;
+        }
+
         try {
             const token = localStorage.getItem("token");
 
@@ -33,6 +47,26 @@ function Dashboard() {
             });
         }
     };
+
+    let recommendationTitle = "🛡️ Рекомендация SafeLink";
+    let recommendationText = "";
+
+    if (result?.risk_score === 0) {
+        recommendationText =
+            "Сайт выглядит безопасным. Тем не менее всегда проверяйте адрес сайта перед вводом паролей и банковских данных.";
+    }
+    else if (result?.risk_score <= 35) {
+        recommendationText =
+            "Обнаружены незначительные признаки риска. Рекомендуется внимательно проверить адрес сайта перед вводом личных данных.";
+    }
+    else if (result?.risk_score <= 65) {
+        recommendationText =
+            "Обнаружено несколько подозрительных признаков. Не рекомендуется вводить пароли, коды подтверждения или банковские данные без дополнительной проверки.";
+    }
+    else {
+        recommendationText =
+            "Высока вероятность мошенничества или фишинга. Не вводите личные данные и не переходите по ссылке без необходимости.";
+    }
 
     return (
         <>
@@ -298,9 +332,11 @@ function Dashboard() {
                                         style={{
                                             textAlign: "left",
                                             marginTop: "15px",
+                                            fontSize: "14px",
+                                            lineHeight: "1.5",
                                         }}
                                     >
-                                        {result.reasons.map(
+                                        {result.reasons.slice(0, 5).map(
                                             (
                                                 reason,
                                                 index
@@ -335,32 +371,14 @@ function Dashboard() {
                                         </h3>
 
                                         <p
-                                            style={{
-                                                margin: 0,
-                                                lineHeight: "1.8",
-                                                fontSize: "15px",
-                                            }}
-                                        >
-                                            SafeLink анализирует признаки фишинга,
-                                            подмену символов, имитацию брендов,
-                                            структуру домена и другие факторы риска.
-                                            <br />
-                                            <br />
-                                            Однако ни одна система не может
-                                            гарантировать 100% точность определения
-                                            любого сайта.
-                                            <br />
-                                            <br />
-                                            Некоторые безопасные сайты могут быть
-                                            отмечены как подозрительные, а новые
-                                            мошеннические сайты могут временно не
-                                            обнаруживаться.
-                                            <br />
-                                            <br />
-                                            Перед вводом паролей, банковских карт
-                                            или личных данных всегда дополнительно
-                                            проверяйте адрес сайта вручную.
-                                        </p>
+                                        style={{
+                                            margin: 0,
+                                            lineHeight: "1.8",
+                                            fontSize: "15px",
+                                        }}
+                                    >
+                                        {recommendationText}
+                                    </p>
                                     </div>
                                 </>
                             ) : (

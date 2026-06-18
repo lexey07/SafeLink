@@ -27,7 +27,11 @@ def calculate_risk(*analyses: AnalyzerResult) -> RiskEngineResult:
 
 
 def _sum_risk_scores(analyses: tuple[AnalyzerResult, ...]) -> int:
-    return sum(analysis.get("risk_score", 0) for analysis in analyses)
+
+    return sum(
+        analysis.get("risk_score", 0)
+        for analysis in analyses
+    )
 
 
 def _deduplicate_and_sort_reasons(
