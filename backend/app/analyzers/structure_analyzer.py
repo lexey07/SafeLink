@@ -47,6 +47,12 @@ def analyze_structure(url: str) -> StructureAnalysisResult:
     normalized_url = url.strip()
     parsed_url = _parse_url(normalized_url)
     hostname = _get_hostname(parsed_url)
+    
+    if _is_ip_address(hostname):
+        return {
+            "risk_score": 0,
+            "reasons": [],
+        }
 
     if _uses_explicit_http(normalized_url):
         risk_score += 15

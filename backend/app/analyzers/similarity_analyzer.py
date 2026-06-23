@@ -127,25 +127,18 @@ def analyze_similarity(url: str) -> SimilarityAnalysisResult:
 
     if _has_mixed_scripts(hostname):
         risk_score += 35
-        reasons.append("Обнаружено смешение алфавитов")
+        reasons.append(
+            "Используются символы из разных алфавитов"
+        )
 
     if (
         unicode_normalized_hostname != possible_original_hostname
     ):
         risk_score += 40
 
-        reasons.append(
-            "Обнаружена подмена символов разных алфавитов"
-        )
-
-        reasons.append(
-            f"Возможный оригинальный домен: "
-            f"{unicode_normalized_hostname}"
-        )
-
     if possible_original_hostname != hostname and character_substitutions:
         risk_score += 20
-        reasons.append("Обнаружена подмена символов")
+
         reasons.extend(
             f"Подмена символа: {substitution}"
             for substitution in character_substitutions
@@ -153,7 +146,6 @@ def analyze_similarity(url: str) -> SimilarityAnalysisResult:
 
     if multichar_substitutions:
         risk_score += 25
-        reasons.append("Обнаружена визуальная подмена символов")
         reasons.extend(
             f"Подмена символа: {substitution}"
             for substitution in multichar_substitutions
@@ -169,16 +161,6 @@ def analyze_similarity(url: str) -> SimilarityAnalysisResult:
         "risk_score": min(risk_score, MAX_RISK_SCORE),
         "reasons": reasons,
     }
-
-    if possible_original_hostname != hostname and character_substitutions:
-        risk_score += 20
-
-        reasons.append(
-            "Используется подмена символов ("
-            + ", ".join(character_substitutions)
-            + ")"
-        )
-
 
 def _extract_hostname(url: str) -> str:
     normalized_url = url.strip()

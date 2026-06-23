@@ -9,17 +9,16 @@ class RedirectAnalysisResult(TypedDict):
     reasons: list[str]
 
 
-def analyze_redirects(url: str) -> RedirectAnalysisResult:
+def analyze_redirects(
+    response: requests.Response,
+    original_url: str,
+) -> RedirectAnalysisResult:
+
     try:
         normalized_url = (
-            url if "://" in url
-            else f"https://{url}"
-        )
-
-        response = requests.get(
-            normalized_url,
-            allow_redirects=True,
-            timeout=5,
+            original_url
+            if "://" in original_url
+            else f"https://{original_url}"
         )
 
         original_domain = (
@@ -46,13 +45,14 @@ def analyze_redirects(url: str) -> RedirectAnalysisResult:
                 ],
             }
 
-    except requests.RequestException:
+    except Exception:
         pass
 
     return {
         "risk_score": 0,
         "reasons": [],
     }
+
 
 def _normalize_domain(domain: str) -> str:
     if domain.startswith("www."):

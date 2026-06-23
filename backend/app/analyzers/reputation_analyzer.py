@@ -2,6 +2,7 @@ from socket import gaierror, gethostbyname
 from typing import TypedDict
 from urllib.parse import ParseResult, urlparse
 from datetime import datetime, timedelta
+from ipaddress import ip_address
 
 import requests
 
@@ -34,9 +35,15 @@ def analyze_reputation(url: str) -> ReputationAnalysisResult:
         }
 
     if _has_dns_record(hostname):
-        reasons.append(
-            "Домен существует и доступен в интернете"
-        )
+
+        if _is_ip_address(hostname):
+            reasons.append(
+                "IP-адрес доступен в интернете"
+            )
+        else:
+            reasons.append(
+                "Домен существует и доступен в интернете"
+            )
 
     else:
         risk_score += 50
@@ -118,3 +125,10 @@ def _update_openphish_cache() -> None:
 
     except requests.RequestException:
         pass
+
+def _is_ip_address(value: str) -> bool:
+    try:
+        ip_address(value)
+        return True
+    except ValueError:
+        return False

@@ -8,22 +8,15 @@ class HtmlAnalysisResult(TypedDict):
     reasons: list[str]
 
 
-def analyze_html(url: str) -> HtmlAnalysisResult:
+def analyze_html(
+    response: requests.Response,
+) -> HtmlAnalysisResult:
+
     risk_score = 0
     reasons: list[str] = []
 
     try:
-        normalized_url = (
-            url if "://" in url
-            else f"https://{url}"
-        )
-
-        response = requests.get(
-            normalized_url,
-            timeout=5,
-        )
-
-        html = response.text.lower()
+        html = response.text[:50000].lower()
 
         if 'type="password"' in html:
             risk_score += 15
@@ -31,30 +24,7 @@ def analyze_html(url: str) -> HtmlAnalysisResult:
                 "На странице обнаружено поле ввода пароля"
             )
 
-        #if "<form" in html:
-         #   risk_score += 10
-          #  reasons.append(
-           #     "На странице обнаружена форма ввода данных"
-            #)
-
-     #   suspicious_keywords = [
-      #      "verify account",
-       #     "confirm account",
-        #    "update payment",
-         #   "enter password",
-          #  "login",
-           # "sign in",
-        #]
-
-        #for keyword in suspicious_keywords:
-         #   if keyword in html:
-          #      risk_score += 5
-           #     reasons.append(
-            #        "Обнаружены признаки страницы авторизации"
-             #   )
-              #  break
-
-    except requests.RequestException:
+    except Exception:
         pass
 
     return {

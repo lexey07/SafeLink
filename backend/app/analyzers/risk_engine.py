@@ -37,6 +37,7 @@ def _sum_risk_scores(analyses: tuple[AnalyzerResult, ...]) -> int:
 def _deduplicate_and_sort_reasons(
     analyses: tuple[AnalyzerResult, ...],
 ) -> list[str]:
+
     unique_reasons = {
         reason
         for analysis in analyses
@@ -44,7 +45,57 @@ def _deduplicate_and_sort_reasons(
         if reason
     }
 
-    return sorted(unique_reasons)
+    critical_reasons = (
+        "имитирует бренд",
+        "Подмена символа",
+        "OpenPhish",
+        "IP-адрес",
+        "Punycode",
+        "алфавитов",
+        "редирект",
+    )
+
+    has_critical_reason = any(
+        any(keyword in reason for keyword in critical_reasons)
+        for reason in unique_reasons
+    )
+
+    if has_critical_reason:
+        unique_reasons = {
+            reason
+            for reason in unique_reasons
+            if reason not in (
+                "Домен существует более года",
+                "Домен существует и доступен в интернете",
+            )
+        }
+
+    def priority(reason: str) -> int:
+
+        if "OpenPhish" in reason:
+            return 0
+
+        if "имитирует бренд" in reason:
+            return 1
+
+        if "Подмена символа" in reason:
+            return 2
+
+        if "алфавитов" in reason:
+            return 3
+
+        if "IP-адрес" in reason:
+            return 4
+
+        if "не найден" in reason:
+            return 5
+
+        return 100
+
+    return sorted(
+        unique_reasons,
+        key=priority,
+    )[:5]
 
 
 def _get_status(risk_score: int):

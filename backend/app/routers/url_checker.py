@@ -7,7 +7,7 @@ from app.database.session import get_db
 from app.schemas.url_schema import UrlSchema
 from app.dependencies import get_current_user
 from app.analyzers.url_analyzer import analyze_url
-from app.deepseek_service import explain_url
+from app.qwen_service import explain_url
 
 router = APIRouter()
 
