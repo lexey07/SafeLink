@@ -1,0 +1,92 @@
+.page-header {
+
+    text-align: center;
+
+    margin-bottom: 55px;
+
+    animation: fadeDown .5s ease;
+}
+
+.page-title{
+
+    margin:0;
+
+    color:white;
+
+    font-size:78px;
+
+    font-weight:900;
+
+    letter-spacing:-2px;
+
+    line-height:1;
+
+    text-shadow:
+        0 0 18px rgba(255,255,255,.12),
+        0 0 45px rgba(56,189,248,.25);
+
+}
+
+.page-subtitle{
+
+    margin-top:18px;
+
+    font-size:24px;
+
+    color:#D5E8FF;
+
+    font-weight:400;
+
+}
+
+@keyframes fadeDown{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(-20px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}
+
+@media(max-width:900px){
+
+    .page-title{
+
+        font-size:58px;
+
+    }
+
+    .page-subtitle{
+
+        font-size:20px;
+
+    }
+
+}
+
+@media(max-width:650px){
+
+    .page-title{
+
+        font-size:42px;
+
+    }
+
+    .page-subtitle{
+
+        font-size:18px;
+
+    }
+
+}

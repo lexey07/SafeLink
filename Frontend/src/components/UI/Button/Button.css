@@ -1,0 +1,85 @@
+.sl-button{
+
+    border:none;
+
+    border-radius:16px;
+
+    padding:16px 30px;
+
+    font-size:17px;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+    display:inline-flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:10px;
+
+}
+
+.sl-button:hover{
+
+    transform:translateY(-3px);
+
+}
+
+.sl-button:active{
+
+    transform:scale(.98);
+
+}
+
+.sl-button.primary{
+
+    background:#38BDF8;
+
+    color:#061A40;
+
+}
+
+.sl-button.primary:hover{
+
+    box-shadow:0 0 30px rgba(56,189,248,.45);
+
+}
+
+.sl-button.premium{
+
+    background:#FACC15;
+
+    color:#061A40;
+
+}
+
+.sl-button.danger{
+
+    background:#DC2626;
+
+    color:white;
+
+}
+
+.sl-button.secondary{
+
+    background:#102D5E;
+
+    color:white;
+
+    border:1px solid rgba(125,211,252,.2);
+
+}
+
+.sl-button:disabled{
+
+    opacity:.5;
+
+    cursor:not-allowed;
+
+}

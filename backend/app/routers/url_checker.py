@@ -7,7 +7,7 @@ from app.database.session import get_db
 from app.schemas.url_schema import UrlSchema
 from app.dependencies import get_current_user
 from app.analyzers.url_analyzer import analyze_url
-from app.qwen_service import explain_url
+from app.deepseek_service import explain_url
 
 router = APIRouter()
 
@@ -55,7 +55,10 @@ def check_url(
     check = UrlCheck(
         url=data.url,
         status=status,
-        username=current_user
+        risk_score=risk_score,
+        reasons=reasons,
+        ai_explanation=ai_explanation,
+        username=current_user,
     )
 
     db.add(check)
@@ -69,5 +72,5 @@ def check_url(
         "reasons": reasons,
         "ai_explanation": ai_explanation,
         "checks_left": user.checks_left,
-        "premium": user.is_premium
+        "is_premium": user.is_premium
     }

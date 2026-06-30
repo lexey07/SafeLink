@@ -1,4 +1,7 @@
 import random
+import os
+import shutil
+import uuid
 from app.jwt_handler import create_access_token
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -12,6 +15,7 @@ from app.security import verify_password
 from app.dependencies import get_current_user
 from app.schemas.verify_schema import VerifySchema
 from app.schemas.avatar_schema import AvatarSchema
+from fastapi import UploadFile, File
 
 router = APIRouter()
 
@@ -184,7 +188,7 @@ def resend_code(
 
 @router.post("/update-avatar")
 def update_avatar(
-    data: AvatarSchema,
+    avatar: UploadFile = File(...),
     current_user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -197,7 +201,48 @@ def update_avatar(
             "message": "Пользователь не найден"
         }
 
-    user.avatar = data.avatar
+    if not avatar.content_type.startswith("image/"):
+        return {
+            "message": "Можно загружать только изображения"
+        }
+    
+    avatar.file.seek(0, 2)
+    file_size = avatar.file.tell()
+    avatar.file.seek(0)
+
+    if file_size > 5 * 1024 * 1024:
+        return {
+            "message": "Максимальный размер изображения — 5 МБ"
+        }
+
+    extension = os.path.splitext(
+        avatar.filename
+    )[1]
+
+    filename = (
+        f"{uuid.uuid4()}{extension}"
+    )
+
+    upload_path = os.path.join(
+        "uploads",
+        "avatars",
+        filename
+    )
+
+    print("CWD:", os.getcwd())
+    print("UPLOAD PATH:", upload_path)
+    print("EXISTS uploads:", os.path.exists("uploads"))
+    print("EXISTS avatars:", os.path.exists(os.path.join("uploads", "avatars")))
+
+    with open(upload_path, "wb") as buffer:
+        shutil.copyfileobj(
+            avatar.file,
+            buffer
+        )
+
+    user.avatar = (
+        f"/uploads/avatars/{filename}"
+    )
 
     db.commit()
 

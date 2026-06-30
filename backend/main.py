@@ -3,6 +3,7 @@ from app.routers.auth import router as auth_router
 from app.routers.url_checker import router as url_router
 from app.routers.history import router as history_router
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
@@ -29,3 +30,8 @@ def health():
     return {
         "status": "OK"
     }
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads",
+)

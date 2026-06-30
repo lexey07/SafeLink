@@ -1,0 +1,23 @@
+.sl-card{
+
+    background:#102D5E;
+
+    border-radius:22px;
+
+    border:1px solid rgba(125,211,252,.18);
+
+    box-shadow:0 10px 30px rgba(0,0,0,.18);
+
+    padding:28px;
+
+    transition:.25s;
+
+}
+
+.sl-card:hover{
+
+    transform:translateY(-4px);
+
+    box-shadow:0 20px 45px rgba(56,189,248,.15);
+
+}
