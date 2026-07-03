@@ -1,0 +1,17 @@
+google.com
+youtube.com
+github.com
+openai.com
+microsoft.com
+apple.com
+amazon.com
+paypal.com
+wikipedia.org
+linkedin.com
+telegram.org
+whatsapp.com
+discord.com
+netflix.com
+instagram.com
+facebook.com
+x.com
