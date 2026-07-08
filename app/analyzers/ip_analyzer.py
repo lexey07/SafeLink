@@ -1,39 +1,22 @@
-from typing import TypedDict
-from urllib.parse import urlparse
-import ipaddress
+from app.analyzers.base_analyzer import BaseAnalyzer
+from typing import Dict, Any
+from ipaddress import ip_address
 
 
-class IPAnalysisResult(TypedDict):
-    risk_score: int
-    reasons: list[str]
-
-
-def analyze_ip(url: str) -> IPAnalysisResult:
-    try:
-        normalized_url = (
-            url if "://" in url
-            else f"//{url}"
-        )
-
-        hostname = urlparse(normalized_url).hostname
-
+class IpAnalyzer(BaseAnalyzer):
+    """Анализатор IP-адресов в URL."""
+    
+    def analyze(self, url: str) -> Dict[str, Any]:
+        self._reset()
+        hostname = self._extract_hostname(url)
+        
         if not hostname:
-            return {
-                "risk_score": 0,
-                "reasons": [],
-            }
-
-        ipaddress.ip_address(hostname)
-
-        return {
-            "risk_score": 30,
-            "reasons": [
-                "В ссылке используется IP-адрес вместо домена"
-            ],
-        }
-
-    except ValueError:
-        return {
-            "risk_score": 0,
-            "reasons": [],
-        }
+            return self._get_result()
+        
+        try:
+            ip_address(hostname)
+            self._add_risk(30, "В ссылке используется IP-адрес вместо домена")
+        except ValueError:
+            pass
+        
+        return self._get_result()

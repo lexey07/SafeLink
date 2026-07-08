@@ -1,37 +1,22 @@
-from typing import TypedDict
-from urllib.parse import urlparse
+from app.analyzers.base_analyzer import BaseAnalyzer
+from typing import Dict, Any
 
 
-class TrustedDomainResult(TypedDict):
-    trusted: bool
-
-
-def analyze_trusted_domain(url: str) -> TrustedDomainResult:
-    hostname = _extract_hostname(url)
-
-    try:
-        with open(
-            "app/trusted_domains.txt",
-            "r",
-            encoding="utf-8",
-        ) as file:
-            trusted_domains = {
-                line.strip().lower()
-                for line in file
-                if line.strip()
-            }
-
-    except FileNotFoundError:
-        trusted_domains = set()
-
-    return {
-        "trusted": hostname in trusted_domains
-    }
-
-
-def _extract_hostname(url: str) -> str:
-    parsed = urlparse(
-        url if "://" in url else f"//{url}"
-    )
-
-    return (parsed.hostname or "").lower()
+class TrustedDomainAnalyzer(BaseAnalyzer):
+    """Анализатор доверенных доменов."""
+    
+    def __init__(self, trusted_file: str = "app/trusted_domains.txt"):
+        super().__init__()
+        self._trusted_file = trusted_file
+    
+    def analyze(self, url: str) -> Dict[str, Any]:
+        self._reset()
+        hostname = self._extract_hostname(url)
+        
+        try:
+            with open(self._trusted_file, "r", encoding="utf-8") as f:
+                trusted = {line.strip().lower() for line in f if line.strip()}
+        except FileNotFoundError:
+            trusted = set()
+        
+        return {"trusted": hostname in trusted}

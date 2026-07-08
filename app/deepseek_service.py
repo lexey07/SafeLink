@@ -1,27 +1,81 @@
 from openai import OpenAI
-
+from typing import List, Optional
 from app.config import DEEPSEEK_API_KEY
 
-client = OpenAI(
-    api_key=DEEPSEEK_API_KEY,
-    base_url="https://api.deepseek.com",
-)
 
-def explain_url(
-    url: str,
-    status: str,
-    risk_score: int,
-    reasons: list[str],
-) -> str:
+class DeepSeekClient:
+    """
+    Клиент для работы с DeepSeek API.
+    Инкапсулирует создание промптов, вызов API и обработку ошибок.
+    """
     
-    try:
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {
-                    "role": "system",
-                    "content": 
-"""Ты — ИИ-помощник сервиса SafeLink.
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: str = "https://api.deepseek.com",
+        model: str = "deepseek-chat",
+        temperature: float = 0.3,
+        max_tokens: int = 300
+    ):
+        """
+        Инициализация клиента DeepSeek.
+        
+        Args:
+            api_key: API ключ DeepSeek
+            base_url: Базовый URL API
+            model: Модель для использования
+            temperature: Температура генерации
+            max_tokens: Максимальное количество токенов
+        """
+        self._api_key = api_key or DEEPSEEK_API_KEY
+        self._client = OpenAI(
+            api_key=self._api_key,
+            base_url=base_url,
+        )
+        self._model = model
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+    
+    def explain_url(
+        self,
+        url: str,
+        status: str,
+        risk_score: int,
+        reasons: List[str]
+    ) -> str:
+        """
+        Получает объяснение результата проверки от DeepSeek.
+        
+        Args:
+            url: Проверяемый URL
+            status: Статус (Безопасно/Подозрительно/Высокий риск/Опасно)
+            risk_score: Оценка риска (0-100)
+            reasons: Список причин
+        
+        Returns:
+            Объяснение от ИИ или fallback-ответ
+        """
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": self._get_system_prompt()},
+                    {"role": "user", "content": self._build_user_prompt(url, status, risk_score, reasons)}
+                ],
+                temperature=self._temperature,
+                max_tokens=self._max_tokens,
+            )
+            
+            content = response.choices[0].message.content
+            return content.strip() if content else self._get_fallback_response()
+            
+        except Exception as e:
+            print(f"DeepSeek Error: {e}")
+            return self._get_fallback_response()
+    
+    def _get_system_prompt(self) -> str:
+        """Возвращает системный промпт."""
+        return """Ты — ИИ-помощник сервиса SafeLink.
 
 Твоя задача — объяснять результаты проверки ссылок, выполненной системой SafeLink.
 
@@ -45,11 +99,18 @@ def explain_url(
 Если ссылка опасная — объясни, почему ей нельзя доверять.
 
 Если информации недостаточно — прямо скажи об этом, не выдумывая дополнительные причины."""
-                },
-                {
-                    "role": "user",
-                    "content": f"""
-SafeLink завершил анализ ссылки.
+    
+    def _build_user_prompt(
+        self,
+        url: str,
+        status: str,
+        risk_score: int,
+        reasons: List[str]
+    ) -> str:
+        """Собирает пользовательский промпт."""
+        reasons_text = "\n".join(f"- {r}" for r in reasons) if reasons else "- Нет причин"
+        
+        return f"""SafeLink завершил анализ ссылки.
 
 URL:
 {url}
@@ -62,7 +123,7 @@ URL:
 
 Причины, обнаруженные анализаторами SafeLink:
 
-{chr(10).join("- " + r for r in reasons)}
+{reasons_text}
 
 Используя только эти данные:
 
@@ -70,28 +131,33 @@ URL:
 2. Простыми словами поясни каждую найденную причину.
 3. Не добавляй причин, которых нет выше.
 4. Не меняй оценку риска.
-5. Закончи краткой рекомендацией.
-"""
-                }
-            ],
-            temperature=0.3,
-            max_tokens=300,
-        )
+5. Закончи краткой рекомендацией."""
+    
+    def _get_fallback_response(self) -> str:
+        """Возвращает fallback-ответ при ошибке."""
+        return "Не удалось получить объяснение от ИИ. Результат проверки ссылки сформирован анализаторами SafeLink."
 
-        content = response.choices[0].message.content
 
-        if not content:
-            return (
-                "Не удалось получить объяснение от ИИ. "
-                "Результат проверки ссылки сформирован анализаторами SafeLink."
-            )
+# ═══════════════════════════════════════════════════════════════
+# ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ (чтобы старый код продолжал работать)
+# ═══════════════════════════════════════════════════════════════
 
-        return content.strip()
+_client = DeepSeekClient()
 
-    except Exception as e:
-        print(f"DeepSeek Error: {e}")
 
-        return (
-            "Не удалось получить объяснение от ИИ. "
-            "Результат проверки ссылки сформирован анализаторами SafeLink."
-        )
+def explain_url(
+    url: str,
+    status: str,
+    risk_score: int,
+    reasons: List[str]
+) -> str:
+    """
+    Обратная совместимость со старым кодом.
+    Вызывает метод explain_url у синглтона DeepSeekClient.
+    """
+    return _client.explain_url(url, status, risk_score, reasons)
+
+
+def get_deepseek_client() -> DeepSeekClient:
+    """Возвращает экземпляр DeepSeekClient для DI."""
+    return _client

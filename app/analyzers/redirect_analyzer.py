@@ -1,61 +1,31 @@
-from typing import TypedDict
+from app.analyzers.base_analyzer import BaseAnalyzer
+from typing import Dict, Any
 from urllib.parse import urlparse
-
 import requests
 
 
-class RedirectAnalysisResult(TypedDict):
-    risk_score: int
-    reasons: list[str]
-
-
-def analyze_redirects(
-    response: requests.Response,
-    original_url: str,
-) -> RedirectAnalysisResult:
-
-    try:
-        normalized_url = (
-            original_url
-            if "://" in original_url
-            else f"https://{original_url}"
-        )
-
-        original_domain = (
-            urlparse(normalized_url).hostname or ""
-        )
-
-        final_domain = (
-            urlparse(response.url).hostname or ""
-        )
-
-        if (
-            final_domain
-            and original_domain
-            and _normalize_domain(final_domain)
-            != _normalize_domain(original_domain)
-        ):
-            return {
-                "risk_score": 30,
-                "reasons": [
-                    (
-                        "Обнаружен редирект на другой домен: "
-                        f"{final_domain}"
-                    )
-                ],
-            }
-
-    except Exception:
-        pass
-
-    return {
-        "risk_score": 0,
-        "reasons": [],
-    }
-
-
-def _normalize_domain(domain: str) -> str:
-    if domain.startswith("www."):
-        return domain[4:]
-
-    return domain
+class RedirectAnalyzer(BaseAnalyzer):
+    """Анализатор редиректов."""
+    
+    def analyze(self, url: str, response: requests.Response = None) -> Dict[str, Any]:
+        self._reset()
+        
+        if not response:
+            return self._get_result()
+        
+        original_hostname = self._extract_hostname(url)
+        final_hostname = self._extract_hostname(response.url)
+        
+        if original_hostname and final_hostname:
+            orig = self._normalize(original_hostname)
+            final = self._normalize(final_hostname)
+            
+            if orig != final:
+                self._add_risk(30, f"Обнаружен редирект на другой домен: {final_hostname}")
+        
+        return self._get_result()
+    
+    def _normalize(self, domain: str) -> str:
+        if domain.startswith("www."):
+            return domain[4:]
+        return domain

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -6,8 +6,8 @@ from app.models.url_check import UrlCheck
 from app.database.session import get_db
 from app.schemas.url_schema import UrlSchema
 from app.dependencies import get_current_user
-from app.analyzers.url_analyzer import analyze_url
-from app.deepseek_service import explain_url
+from app.analyzers.url_analyzer import analyze_url, get_url_analyzer
+from app.deepseek_service import explain_url, get_deepseek_client
 
 router = APIRouter()
 
@@ -20,38 +20,41 @@ def check_url(
     current_user: str = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-
-    user = db.query(User).filter(
-        User.username == current_user
-    ).first()
-
+    """Проверка URL на безопасность."""
+    
+    # Получаем пользователя
+    user = db.query(User).filter(User.username == current_user).first()
+    
     if not user:
-        return {
-            "message": "Пользователь не найден"
-        }
-
+        return {"message": "Пользователь не найден"}
+    
+    # Проверка лимитов
     if not user.is_premium and user.checks_left <= 0:
         return {
             "message": "Лимит бесплатных проверок исчерпан. Купите Premium."
         }
-
+    
+    # Списываем проверку (если не премиум)
     if not user.is_premium:
         user.checks_left -= 1
         db.commit()
-
+    
+    # Анализ URL
     analysis = analyze_url(data.url)
-
+    
     status = analysis["status"]
     risk_score = analysis["risk_score"]
     reasons = analysis["reasons"]
-
+    
+    # Получаем AI объяснение
     ai_explanation = explain_url(
         data.url,
         status,
         risk_score,
         reasons
     )
-
+    
+    # Сохраняем в историю
     check = UrlCheck(
         url=data.url,
         status=status,
@@ -60,11 +63,11 @@ def check_url(
         ai_explanation=ai_explanation,
         username=current_user,
     )
-
+    
     db.add(check)
     db.commit()
     db.refresh(check)
-
+    
     return {
         "url": data.url,
         "status": status,

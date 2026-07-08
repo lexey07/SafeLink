@@ -1,33 +1,22 @@
-from typing import TypedDict
-
+from app.analyzers.base_analyzer import BaseAnalyzer
+from typing import Dict, Any
 import requests
 
 
-class HtmlAnalysisResult(TypedDict):
-    risk_score: int
-    reasons: list[str]
-
-
-def analyze_html(
-    response: requests.Response,
-) -> HtmlAnalysisResult:
-
-    risk_score = 0
-    reasons: list[str] = []
-
-    try:
-        html = response.text[:50000].lower()
-
-        if 'type="password"' in html:
-            risk_score += 15
-            reasons.append(
-                "На странице обнаружено поле ввода пароля"
-            )
-
-    except Exception:
-        pass
-
-    return {
-        "risk_score": risk_score,
-        "reasons": reasons,
-    }
+class HtmlAnalyzer(BaseAnalyzer):
+    """Анализатор HTML-содержимого страницы."""
+    
+    def analyze(self, url: str, response: requests.Response = None) -> Dict[str, Any]:
+        self._reset()
+        
+        if not response:
+            return self._get_result()
+        
+        try:
+            html = response.text[:50000].lower()
+            if 'type="password"' in html:
+                self._add_risk(15, "На странице обнаружено поле ввода пароля")
+        except Exception:
+            pass
+        
+        return self._get_result()

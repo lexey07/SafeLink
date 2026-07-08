@@ -1,35 +1,22 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt
-
-from app.jwt_handler import SECRET_KEY, ALGORITHM
+from app.auth import AuthHandler, get_auth_handler
 
 security = HTTPBearer()
 
+
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    token = credentials.credentials
-
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_handler: AuthHandler = Depends(get_auth_handler),
+) -> str:
+    """
+    Получает текущего пользователя из токена.
+    Используется как dependency в роутерах.
+    """
     try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-
-        username = payload.get("username")
-
-        if username is None:
-            raise HTTPException(
-                status_code=401,
-                detail="Неверный токен"
-            )
-
-        return username
-
-    except:
+        return auth_handler.get_username(credentials.credentials)
+    except ValueError as e:
         raise HTTPException(
-            status_code=401,
-            detail="Токен недействителен"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
         )

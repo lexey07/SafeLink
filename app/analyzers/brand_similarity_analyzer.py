@@ -1,282 +1,137 @@
-from typing import TypedDict
-from urllib.parse import ParseResult, urlparse
+from app.analyzers.base_analyzer import BaseAnalyzer
+from typing import Dict, Any, List, Set
 
 
-class BrandSimilarityResult(TypedDict):
-    risk_score: int
-    reasons: list[str]
-
-
-class SimilarBrandMatch(TypedDict):
-    brand: str
-    distance: int
-
-
-class BrandKeywordMatch(TypedDict):
-    brand: str
-
-
-KNOWN_BRANDS = {
-    "google",
-    "paypal",
-    "amazon",
-    "apple",
-    "microsoft",
-    "facebook",
-    "instagram",
-    "telegram",
-    "whatsapp",
-    "discord",
-    "steam",
-    "binance",
-    "openai",
-    "twitter",
-    "youtube",
-    "github",
-    "linkedin",
-    "netflix",
-    "gosuslugi",
-    "sberbank",
-    "tbank",
-    "alfabank",
-    "vtb",
-    "yandex",
-    "mail",
-    "vk",
-    "ozon",
-    "wildberries",
-    "avito",
-    "icloud",
-    "dropbox",
-    "adobe",
-    "stripe",
-    "coinbase",
-    "booking",
-}
-
-MAX_RISK_SCORE = 100
-BRAND_KEYWORD_RISK_SCORE = 40
-HOSTNAME_BRAND_RISK_SCORE = 40
-DISTANCE_RISK_SCORES = {
-    1: 50,
-    2: 35,
-}
-
-
-def analyze_brand_similarity(url: str) -> BrandSimilarityResult:
-    risk_score = 0
-    reasons: list[str] = []
-
-    hostname = _extract_hostname(url)
-    domain_name = _extract_domain_name_without_tld(hostname)
-    similar_brand_matches = _find_similar_brands(domain_name)
-    brand_keyword_matches = _find_brand_keyword_matches(domain_name)
-    hostname_brand_matches = _find_hostname_brand_matches(hostname, domain_name)
-    brands_with_mention_reason: set[str] = set()
-
-    if _is_ip_address(hostname):
-        return {
-            "risk_score": 0,
-            "reasons": [],
-        }
-
-    for match in similar_brand_matches:
-        brand = match["brand"]
-        risk_score += DISTANCE_RISK_SCORES[match["distance"]]
-
-        if brand not in brands_with_mention_reason:
-            reasons.append(
-                f"Ссылка имитирует бренд {_format_brand_name(brand)}"
-            )
-            brands_with_mention_reason.add(brand)
-
-    for match in brand_keyword_matches:
-        brand = match["brand"]
-        risk_score += BRAND_KEYWORD_RISK_SCORE
-
-        if brand not in brands_with_mention_reason:
-            reasons.append(
-                f"Ссылка использует бренд {_format_brand_name(brand)}"
-            )
-            brands_with_mention_reason.add(brand)
-
-    for match in hostname_brand_matches:
-        brand = match["brand"]
-        risk_score += HOSTNAME_BRAND_RISK_SCORE
-
-        if brand not in brands_with_mention_reason:
-            reasons.append(
-                "Обнаружено упоминание известного бренда в поддомене: "
-                f"{_format_brand_name(brand)}"
-            )
-            brands_with_mention_reason.add(brand)
-
-    return {
-        "risk_score": min(risk_score, MAX_RISK_SCORE),
-        "reasons": _deduplicate_reasons(reasons),
+class BrandSimilarityAnalyzer(BaseAnalyzer):
+    """Анализатор схожести с брендами на основе расстояния Левенштейна."""
+    
+    KNOWN_BRANDS = {
+        "google", "paypal", "amazon", "apple", "microsoft", "facebook",
+        "instagram", "telegram", "whatsapp", "discord", "steam", "binance",
+        "openai", "twitter", "youtube", "github", "linkedin", "netflix",
+        "gosuslugi", "sberbank", "tbank", "alfabank", "vtb", "yandex",
+        "mail", "vk", "ozon", "wildberries", "avito", "icloud",
+        "dropbox", "adobe", "stripe", "coinbase", "booking"
     }
-
-
-def _extract_hostname(url: str) -> str:
-    normalized_url = url.strip()
-    parsed_url = _parse_url(normalized_url)
-
-    try:
-        hostname = parsed_url.hostname
-    except ValueError:
-        return ""
-
-    return (hostname or "").rstrip(".").lower()
-
-
-def _parse_url(url: str) -> ParseResult:
-    if "://" in url:
-        return urlparse(url)
-
-    return urlparse(f"//{url}")
-
-
-def _extract_domain_name_without_tld(hostname: str) -> str:
-    labels = _hostname_labels(hostname)
-
-    if len(labels) >= 2:
-        return labels[-2]
-
-    if labels:
-        return labels[0]
-
-    return ""
-
-
-def _find_similar_brands(domain_name: str) -> list[SimilarBrandMatch]:
-    if not domain_name:
-        return []
-
-    matches: list[SimilarBrandMatch] = []
-
-    for brand in sorted(KNOWN_BRANDS):
-        distance = _levenshtein_distance(domain_name, brand)
-
-        # защита от ложных срабатываний
-        if len(domain_name) < 5 or len(brand) < 5:
-            continue
-
-        length_difference = abs(
-            len(domain_name) - len(brand)
-        )
-
-        if (
-            distance in DISTANCE_RISK_SCORES
-            and length_difference <= 2
-        ):
-            matches.append({
-                "brand": brand,
-                "distance": distance,
-            })
-
-    return matches
-
-
-def _find_brand_keyword_matches(domain_name: str) -> list[BrandKeywordMatch]:
-    if not domain_name:
-        return []
-
-    matches: list[BrandKeywordMatch] = []
-
-    for brand in sorted(KNOWN_BRANDS):
-
-        # настоящий домен бренда не должен получать риск
-        if domain_name == brand:
-            continue
-
-        # ищем бренд внутри другого домена
-        if brand in domain_name:
-            matches.append({"brand": brand})
-
-    return matches
-
-
-def _find_hostname_brand_matches(
-    hostname: str,
-    domain_name: str,
-) -> list[BrandKeywordMatch]:
-    labels = _hostname_labels(hostname)
-
-    if len(labels) <= 2:
-        return []
-
-    subdomain_labels = labels[:-2]
-    matches: list[BrandKeywordMatch] = []
-
-    for brand in sorted(KNOWN_BRANDS):
-        if brand == domain_name:
-            continue
-
-        if any(brand in label for label in subdomain_labels):
-            matches.append({"brand": brand})
-
-    return matches
-
-
-def _levenshtein_distance(first_value: str, second_value: str) -> int:
-    if first_value == second_value:
-        return 0
-
-    if not first_value:
-        return len(second_value)
-
-    if not second_value:
-        return len(first_value)
-
-    previous_row = list(range(len(second_value) + 1))
-
-    for first_index, first_character in enumerate(first_value, start=1):
-        current_row = [first_index]
-
-        for second_index, second_character in enumerate(second_value, start=1):
-            insertion_cost = current_row[second_index - 1] + 1
-            deletion_cost = previous_row[second_index] + 1
-            substitution_cost = previous_row[second_index - 1]
-
-            if first_character != second_character:
-                substitution_cost += 1
-
-            current_row.append(
-                min(insertion_cost, deletion_cost, substitution_cost)
-            )
-
-        previous_row = current_row
-
-    return previous_row[-1]
-
-
-def _hostname_labels(hostname: str) -> list[str]:
-    return [label for label in hostname.split(".") if label]
-
-
-def _deduplicate_reasons(reasons: list[str]) -> list[str]:
-    deduplicated_reasons: list[str] = []
-    seen_reasons: set[str] = set()
-
-    for reason in reasons:
-        if reason in seen_reasons:
-            continue
-
-        deduplicated_reasons.append(reason)
-        seen_reasons.add(reason)
-
-    return deduplicated_reasons
-
-
-def _format_brand_name(brand: str) -> str:
-    return brand.capitalize()
-
-from ipaddress import ip_address
-
-
-def _is_ip_address(hostname: str) -> bool:
-    try:
-        ip_address(hostname)
-        return True
-    except ValueError:
-        return False
+    
+    DISTANCE_RISK = {1: 50, 2: 35}
+    BRAND_KEYWORD_RISK = 40
+    HOSTNAME_BRAND_RISK = 40
+    
+    def analyze(self, url: str) -> Dict[str, Any]:
+        self._reset()
+        hostname = self._extract_hostname(url)
+        
+        if not hostname:
+            return self._get_result()
+        
+        # Пропускаем IP-адреса
+        if self._is_ip_address(hostname):
+            return self._get_result()
+        
+        domain_name = self._extract_domain(hostname)
+        if not domain_name:
+            return self._get_result()
+        
+        mentioned_brands: Set[str] = set()
+        
+        # 1. Проверка на схожесть с брендами (расстояние Левенштейна)
+        similar = self._find_similar_brands(domain_name)
+        for brand, distance in similar:
+            risk = self.DISTANCE_RISK.get(distance, 0)
+            self._add_risk(risk, f"Ссылка имитирует бренд {brand.capitalize()}")
+            mentioned_brands.add(brand)
+        
+        # 2. Проверка на упоминание бренда в домене
+        brand_in_domain = self._find_brand_in_domain(domain_name)
+        for brand in brand_in_domain:
+            if brand not in mentioned_brands:
+                self._add_risk(self.BRAND_KEYWORD_RISK, f"Ссылка использует бренд {brand.capitalize()}")
+                mentioned_brands.add(brand)
+        
+        # 3. Проверка на упоминание бренда в поддомене
+        brand_in_subdomain = self._find_brand_in_subdomain(hostname, domain_name)
+        for brand in brand_in_subdomain:
+            if brand not in mentioned_brands:
+                self._add_risk(self.HOSTNAME_BRAND_RISK, f"Обнаружено упоминание бренда {brand.capitalize()} в поддомене")
+                mentioned_brands.add(brand)
+        
+        return self._get_result()
+    
+    def _extract_domain(self, hostname: str) -> str:
+        """Извлекает основное доменное имя (без TLD)."""
+        labels = [label for label in hostname.split(".") if label]
+        if len(labels) >= 2:
+            return labels[-2]
+        return labels[0] if labels else ""
+    
+    def _find_similar_brands(self, domain: str) -> List[tuple]:
+        """Находит бренды, похожие на домен (по расстоянию Левенштейна)."""
+        matches = []
+        for brand in self.KNOWN_BRANDS:
+            # Защита от ложных срабатываний
+            if len(domain) < 5 or len(brand) < 5:
+                continue
+            
+            distance = self._levenshtein(domain, brand)
+            length_diff = abs(len(domain) - len(brand))
+            
+            if distance in self.DISTANCE_RISK and length_diff <= 2:
+                matches.append((brand, distance))
+        
+        return matches
+    
+    def _find_brand_in_domain(self, domain: str) -> List[str]:
+        """Находит бренды, упомянутые в домене."""
+        matches = []
+        for brand in self.KNOWN_BRANDS:
+            if brand == domain:  # Настоящий домен бренда
+                continue
+            if brand in domain:
+                matches.append(brand)
+        return matches
+    
+    def _find_brand_in_subdomain(self, hostname: str, domain: str) -> List[str]:
+        """Находит бренды, упомянутые в поддоменах."""
+        labels = [label for label in hostname.split(".") if label]
+        if len(labels) <= 2:
+            return []
+        
+        subdomains = labels[:-2]
+        matches = []
+        for brand in self.KNOWN_BRANDS:
+            if brand == domain:
+                continue
+            if any(brand in sub for sub in subdomains):
+                matches.append(brand)
+        return matches
+    
+    def _levenshtein(self, s1: str, s2: str) -> int:
+        """Вычисляет расстояние Левенштейна между двумя строками."""
+        if s1 == s2:
+            return 0
+        if not s1:
+            return len(s2)
+        if not s2:
+            return len(s1)
+        
+        prev = list(range(len(s2) + 1))
+        for i, c1 in enumerate(s1, 1):
+            curr = [i]
+            for j, c2 in enumerate(s2, 1):
+                insert = curr[j - 1] + 1
+                delete = prev[j] + 1
+                replace = prev[j - 1] + (c1 != c2)
+                curr.append(min(insert, delete, replace))
+            prev = curr
+        
+        return prev[-1]
+    
+    def _is_ip_address(self, hostname: str) -> bool:
+        """Проверяет, является ли hostname IP-адресом."""
+        try:
+            from ipaddress import ip_address
+            ip_address(hostname)
+            return True
+        except ValueError:
+            return False

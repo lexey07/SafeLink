@@ -1,134 +1,127 @@
-from ipaddress import ip_address
-from app.analyzers.structure_analyzer import analyze_structure
-from app.analyzers.similarity_analyzer import analyze_similarity
 import time
+from typing import Dict, Any, Optional, List
 import requests
-from app.analyzers.brand_similarity_analyzer import (
-    analyze_brand_similarity,
-)
-from app.analyzers.reputation_analyzer import (
-    analyze_reputation,
-)
-from app.analyzers.risk_engine import calculate_risk
-from app.analyzers.domain_age_analyzer import (
-    analyze_domain_age,
-)
-from app.analyzers.trusted_domain_analyzer import (
-    analyze_trusted_domain,
-)
-from app.analyzers.redirect_analyzer import (
-    analyze_redirects,
-)
-from app.analyzers.html_analyzer import (
-    analyze_html,
-)
-from app.analyzers.ip_analyzer import (
-    analyze_ip,
-)
 
-def _is_ip_address(url: str) -> bool:
-    try:
-        ip_address(url.strip())
-        return True
-    except ValueError:
-        return False
+from app.analyzers.structure_analyzer import StructureAnalyzer
+from app.analyzers.similarity_analyzer import SimilarityAnalyzer
+from app.analyzers.brand_similarity_analyzer import BrandSimilarityAnalyzer
+from app.analyzers.reputation_analyzer import ReputationAnalyzer
+from app.analyzers.domain_age_analyzer import DomainAgeAnalyzer
+from app.analyzers.redirect_analyzer import RedirectAnalyzer
+from app.analyzers.html_analyzer import HtmlAnalyzer
+from app.analyzers.ip_analyzer import IpAnalyzer
+from app.analyzers.trusted_domain_analyzer import TrustedDomainAnalyzer
+from app.analyzers.risk_engine import RiskEngine, get_risk_engine
 
-def analyze_url(url: str):
 
-    if _is_ip_address(url):
-        reputation_result = analyze_reputation(url)
-        ip_result = analyze_ip(url)
-
-        return calculate_risk(
-            reputation_result,
-            ip_result,
-        )
-
-    structure_result = analyze_structure(url)
-    start = time.time()
-    structure_result = analyze_structure(url)
-    print("STRUCTURE:", round(time.time() - start, 3))
+class UrlAnalyzer:
+    """
+    Главный анализатор URL.
+    Оркестрирует работу всех анализаторов и агрегирует результаты.
+    """
     
-    similarity_result = analyze_similarity(url)
-    start = time.time()
-    similarity_result = analyze_similarity(url)
-    print("SIMILARITY:", round(time.time() - start, 3))
+    def __init__(self):
+        """Инициализация всех анализаторов."""
+        self._analyzers = [
+            StructureAnalyzer(),
+            SimilarityAnalyzer(),
+            BrandSimilarityAnalyzer(),
+            ReputationAnalyzer(),
+            DomainAgeAnalyzer(),
+            RedirectAnalyzer(),
+            HtmlAnalyzer(),
+            IpAnalyzer(),
+        ]
+        self._trusted_analyzer = TrustedDomainAnalyzer()
+        self._risk_engine = get_risk_engine()
     
-    brand_result = analyze_brand_similarity(url)
-    start = time.time()
-    brand_result = analyze_brand_similarity(url)
-    print("BRAND:", round(time.time() - start, 3))
+    def analyze(self, url: str) -> Dict[str, Any]:
+        """
+        Выполняет полный анализ URL.
+        
+        Args:
+            url: URL для анализа
+        
+        Returns:
+            Результат анализа с status, risk_score, reasons
+        """
+        start_time = time.time()
+        
+        # 1. Проверка доверенного домена
+        trusted_result = self._trusted_analyzer.analyze(url)
+        is_trusted = trusted_result.get("trusted", False)
+        
+        # 2. Запуск всех анализаторов (ОДИН РАЗ!)
+        results = []
+        for analyzer in self._analyzers:
+            result = analyzer.analyze(url)
+            
+            # Если домен доверенный — обнуляем риск
+            if is_trusted and "risk_score" in result:
+                result["risk_score"] = 0
+            
+            results.append(result)
+        
+        # 3. HTTP-запрос (если нужно)
+        http_result = self._fetch_and_analyze_http(url)
+        if http_result:
+            results.append(http_result)
+        
+        # 4. Агрегация результатов
+        final_result = self._risk_engine.calculate_risk(*results)
+        
+        print(f"URL analysis completed in {round(time.time() - start_time, 3)}s")
+        return final_result
+    
+    def _fetch_and_analyze_http(self, url: str) -> Optional[Dict[str, Any]]:
+        """
+        Выполняет HTTP-запрос и анализирует редиректы и HTML.
+        
+        Args:
+            url: URL для запроса
+        
+        Returns:
+            Результат анализа или None при ошибке
+        """
+        response = None
+        try:
+            normalized_url = url if "://" in url else f"https://{url}"
+            response = requests.get(
+                normalized_url,
+                allow_redirects=True,
+                timeout=2
+            )
+        except requests.RequestException:
+            return None
+        
+        if not response:
+            return None
+        
+        # Анализ редиректов
+        redirect_result = RedirectAnalyzer().analyze(url, response)
+        
+        # Анализ HTML
+        html_result = HtmlAnalyzer().analyze(url, response)
+        
+        # Агрегируем HTTP-результаты
+        return self._risk_engine.calculate_risk(redirect_result, html_result)
 
-    reputation_result = analyze_reputation(url)
-    start = time.time()
-    reputation_result = analyze_reputation(url)
-    print("REPUTATION:", round(time.time() - start, 3))
 
-    domain_age_result = analyze_domain_age(url)
-    start = time.time()
-    domain_age_result = analyze_domain_age(url)
-    print("DOMAIN_AGE:", round(time.time() - start, 3))
+# ═══════════════════════════════════════════════════════════════
+# ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ (чтобы старый код продолжал работать)
+# ═══════════════════════════════════════════════════════════════
 
-    trusted_result = analyze_trusted_domain(url)
-    start = time.time()
-    trusted_result = analyze_trusted_domain(url)
-    print("TRUSTED:", round(time.time() - start, 3))
+_analyzer = UrlAnalyzer()
 
-    response = None
 
-    try:
-        normalized_url = (
-            url if "://" in url
-            else f"https://{url}"
-        )
+def analyze_url(url: str) -> Dict[str, Any]:
+    """
+    Обратная совместимость со старым кодом.
+    Вызывает метод analyze у синглтона UrlAnalyzer.
+    """
+    return _analyzer.analyze(url)
 
-        response = requests.get(
-            normalized_url,
-            allow_redirects=True,
-            timeout=2,
-        )
 
-    except requests.RequestException:
-        pass
-
-    if response:
-        redirect_result = analyze_redirects(
-            response,
-            url,
-        )
-
-        html_result = analyze_html(
-            response,
-        )
-
-    else:
-        redirect_result = {
-            "risk_score": 0,
-            "reasons": [],
-        }
-
-        html_result = {
-            "risk_score": 0,
-            "reasons": [],
-        }
-
-    ip_result = analyze_ip(url)
-    start = time.time()
-    ip_result = analyze_ip(url)
-    print("IP:", round(time.time() - start, 3))
-
-    if trusted_result["trusted"]:
-        structure_result["risk_score"] = 0
-        similarity_result["risk_score"] = 0
-        brand_result["risk_score"] = 0
-
-    return calculate_risk(
-        structure_result,
-        similarity_result,
-        brand_result,
-        reputation_result,
-        domain_age_result,
-        redirect_result,
-        html_result,
-        ip_result,
-    )
+def get_url_analyzer() -> UrlAnalyzer:
+    """Возвращает экземпляр UrlAnalyzer для DI."""
+    return _analyzer
