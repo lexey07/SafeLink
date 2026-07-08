@@ -71,3 +71,9 @@ def decode_token(token: str) -> Dict[str, Any]:
 def get_auth_handler() -> AuthHandler:
     """Возвращает экземпляр AuthHandler для DI."""
     return _auth_handler
+
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Добавлены методы decode_token и get_username
+#   3. Настройки теперь в __init__
+

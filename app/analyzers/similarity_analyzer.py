@@ -117,3 +117,9 @@ class SimilarityAnalyzer(BaseAnalyzer):
     def _is_in_ranges(char: str, ranges: Tuple[Tuple[int, int], ...]) -> bool:
         code = ord(char)
         return any(start <= code <= end for start, end in ranges)
+
+#Что изменилось:
+#   1. Функция → Класс
+#   2. Все константы вынесены в класс (капсуляция)
+#   3. Убраны дублирующиеся методы (_extract_hostname)
+#   4.Логика разбита на отдельные методы

@@ -20,3 +20,8 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
+
+# Что изменилось:
+#   1. Использует AuthHandler вместо прямого импорта JWT
+#   2. Добавлена фабрика get_auth_handler
+#   3. Улучшена обработка ошибок

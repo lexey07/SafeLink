@@ -70,3 +70,8 @@ def decode_token(token: str) -> Dict[str, Any]:
 def get_jwt_handler() -> JwtHandler:
     """Возвращает экземпляр JwtHandler для DI."""
     return _jwt_handler
+
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Добавлены методы decode_token и get_username
+#   3. Срок жизни токена теперь 7 дней (как и было)

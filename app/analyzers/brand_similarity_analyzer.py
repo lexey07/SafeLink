@@ -135,3 +135,9 @@ class BrandSimilarityAnalyzer(BaseAnalyzer):
             return True
         except ValueError:
             return False
+
+# Что изменилось:
+#   1.Функция → Класс
+#   2. Убраны дублирующиеся методы
+#   3. Константы вынесены в класс
+#   4. Логика разбита на методы

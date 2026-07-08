@@ -71,3 +71,11 @@ class StructureAnalyzer(BaseAnalyzer):
             return ip.is_loopback or ip.is_private
         except ValueError:
             return False
+
+   
+#Что изменилось:
+#   1. Функция → Класс
+#   2. Убраны вспомогательные функции (они в BaseAnalyzer)
+#   3. Убрана логика парсинга URL (она в BaseAnalyzer)
+#   4. Убрана логика добавления риска (она в BaseAnalyzer)
+#   5. Все проверки теперь используют методы родителя

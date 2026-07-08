@@ -20,3 +20,8 @@ class TrustedDomainAnalyzer(BaseAnalyzer):
             trusted = set()
         
         return {"trusted": hostname in trusted}
+
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Убрана логика парсинга URL
+#   3. Путь к файлу можно передать через конструктор

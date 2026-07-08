@@ -183,3 +183,7 @@ def update_avatar(
         "message": "Аватар обновлен",
         "avatar": user.avatar
     }
+
+# Что изменилось:
+#   1. Использует AuthHandler через DI
+#   2. Убраны прямые импорты JWT

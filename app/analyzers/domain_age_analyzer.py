@@ -47,3 +47,8 @@ class DomainAgeAnalyzer(BaseAnalyzer):
             return self._get_result()
         
         return self._get_result()
+    
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Убрана логика парсинга URL
+#   3. Логика разбита на методы

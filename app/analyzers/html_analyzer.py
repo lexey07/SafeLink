@@ -20,3 +20,7 @@ class HtmlAnalyzer(BaseAnalyzer):
             pass
         
         return self._get_result()
+
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Использует методы родителя

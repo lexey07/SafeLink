@@ -144,3 +144,9 @@ def calculate_risk(*analyses: Dict[str, Any]) -> Dict[str, Any]:
 def get_risk_engine() -> RiskEngine:
     """Возвращает экземпляр RiskEngine для DI."""
     return _engine
+
+# Что изменилось:
+#   1. 4 отдельные функции → 1 класс с 6 методами
+#   2. Конфигурация (приоритеты) в __init__
+#   3. Логика разбита на методы
+#   4. Добавлена обратная совместимость
