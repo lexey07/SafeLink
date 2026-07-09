@@ -1,5 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+venv/
 .env
-venv
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
 backend\__pycache__
 backend\app\analyzers\__pycache__
 backend\app\database\__pycache__

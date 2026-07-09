@@ -1,0 +1,59 @@
+.history-page {
+    min-height: 100vh;
+    background: #061A40;
+    color: #FFFFFF;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+.history-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 25px;
+
+    align-items: start;
+}
+
+@media (max-width: 1000px){
+    .history-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+.history-title,
+.history-subtitle {
+    animation: fadeDown .5s ease;
+}
+
+.history-grid {
+    animation: fadeUp .4s ease;
+}
+
+@keyframes fadeDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-card.expanded {
+    grid-column: 1 / -1;
+}

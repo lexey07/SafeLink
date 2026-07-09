@@ -1,0 +1,28 @@
+.empty-history {
+    max-width: 700px;
+    margin: 80px auto;
+    text-align: center;
+    padding: 60px;
+    background: #102D5E;
+    border-radius: 20px;
+    border: 1px solid rgba(125,211,252,.2);
+    box-shadow: 0 0 25px rgba(56,189,248,.08);
+}
+
+.empty-icon {
+    font-size: 70px;
+    margin-bottom: 25px;
+}
+
+.empty-history h2 {
+    margin: 0;
+    color: white;
+    font-size: 34px;
+}
+
+.empty-history p {
+    margin-top: 18px;
+    color: #BFD8F5;
+    font-size: 19px;
+    line-height: 1.6;
+}

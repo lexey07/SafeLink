@@ -1,0 +1,10 @@
+.page-container {
+    width: calc(100% - 80px);
+    max-width: 1700px;
+
+    margin: 0 auto;
+
+    padding: 40px 0;
+
+    box-sizing: border-box;
+}

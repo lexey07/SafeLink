@@ -1,0 +1,30 @@
+.url-input-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.url-input {
+    width: 760px;
+    max-width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid #38BDF8;
+    background: #102D5E;
+    color: white;
+    font-size: 18px;
+    outline: none;
+    transition: .25s;
+    box-sizing: border-box;
+}
+
+.url-input:focus {
+    border-color: #7DD3FC;
+    box-shadow: 0 0 15px rgba(56,189,248,.25);
+}
+
+.url-input::placeholder {
+    color: #A9C9E8;
+}
