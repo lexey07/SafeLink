@@ -50,7 +50,7 @@ class BaseAnalyzer(ABC):
         self._risk_score = 0
         self._reasons = []
 
-#Что изменилось:
+# Что изменилось:
 #   1. Создан абстрактный базовый класс
 #   2. Вынесена общая логика (_extract_hostname, _add_risk, _get_result)
 #   3. Введен единый интерфейс через метод analyze()

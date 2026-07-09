@@ -63,3 +63,9 @@ class ReputationAnalyzer(BaseAnalyzer):
                 print(f"OpenPhish cache updated: {len(self._phishing_cache)} URLs")
         except requests.RequestException:
             pass
+
+# Что изменилось:
+#   1. Функция → Класс
+#   2. Глобальные переменные → поля объекта (инкапсуляция)
+#   3. Убрана логика парсинга URL
+#   4. Кэш теперь принадлежит объекту

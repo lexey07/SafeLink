@@ -72,3 +72,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hasher() -> PasswordHasher:
     """Возвращает экземпляр PasswordHasher для DI."""
     return _hasher
+
+# Что изменилось:
+#   1. Глобальный pwd_context → поле объекта
+#   2. Функции → методы класса
+#   3. Добавлена возможность указать схемы через конструктор

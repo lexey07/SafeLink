@@ -73,7 +73,7 @@ class StructureAnalyzer(BaseAnalyzer):
             return False
 
    
-#Что изменилось:
+# Что изменилось:
 #   1. Функция → Класс
 #   2. Убраны вспомогательные функции (они в BaseAnalyzer)
 #   3. Убрана логика парсинга URL (она в BaseAnalyzer)
